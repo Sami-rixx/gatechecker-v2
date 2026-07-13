@@ -20,11 +20,10 @@ export default function App() {
   const [hasRun, setHasRun] = useState(false);
   const [layerStates, setLayerStates] = useState<Record<Layer, LayerState>>(DEFAULT_LAYER_STATES);
   const [report, setReport] = useState<GateReport | null>(null);
-  const [activeLayer] = useState<Layer | null>(null);
+  const [activeLayer, setActiveLayer] = useState<Layer | null>(null);
   const abortRef = useRef(false);
 
   const handleRun = useCallback(async () => {
-    // Parse JSON
     let data: CanonicalPayload;
     try {
       data = JSON.parse(jsonValue);
@@ -34,11 +33,11 @@ export default function App() {
       return;
     }
 
-    // Reset state
     setIsRunning(true);
     setHasRun(true);
     setReport(null);
     setLayerStates({ ...DEFAULT_LAYER_STATES });
+    setActiveLayer(null);
     abortRef.current = false;
 
     try {
@@ -72,19 +71,27 @@ export default function App() {
     setHasRun(false);
     setReport(null);
     setLayerStates({ ...DEFAULT_LAYER_STATES });
+    setActiveLayer(null);
+  }, []);
+
+  const handleLayerClick = useCallback((layer: Layer) => {
+    setActiveLayer((prev) => (prev === layer ? null : layer));
   }, []);
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: 'var(--bg-canvas)' }}>
+    <div
+      className="min-h-screen flex flex-col relative"
+      style={{ background: 'var(--bg-canvas)' }}
+    >
       {/* Blueprint grid overlay */}
       <div
         className="fixed inset-0 blueprint-grid pointer-events-none"
         style={{ zIndex: 0 }}
       />
 
-      {/* Header */}
+      {/* === HEADER === */}
       <header
-        className="relative flex-shrink-0 flex items-center justify-between px-6 h-14"
+        className="relative flex-shrink-0 flex items-center justify-between px-4 sm:px-6 h-14"
         style={{
           background: 'var(--bg-surface)',
           borderBottom: '1px solid var(--border-subtle)',
@@ -92,41 +99,77 @@ export default function App() {
         }}
       >
         <div className="flex items-center gap-3">
-          {/* Logo */}
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          {/* Möbius strip logo */}
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none" className="flex-shrink-0">
             <path
-              d="M11 1L20 6.5V15.5L11 21L2 15.5V6.5L11 1Z"
-              stroke="var(--accent-teal)"
+              d="M16 4C16 4 8 8 8 16C8 24 16 28 16 28C16 28 24 24 24 16C24 8 16 4 16 4Z"
+              stroke="var(--brass)"
               strokeWidth="1.5"
-              fill="rgba(74, 155, 142, 0.1)"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="rgba(201,169,110,0.08)"
             />
-            <circle cx="11" cy="11" r="3" fill="var(--accent-teal)" opacity="0.6" />
+            <path
+              d="M16 28C16 28 12 20 12 16C12 12 16 4 16 4"
+              stroke="var(--brass)"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              fill="none"
+              opacity="0.5"
+            />
+            <circle cx="16" cy="16" r="3" fill="var(--brass)" opacity="0.35" />
           </svg>
-          <span
-            className="font-heading text-sm font-semibold tracking-widest"
-            style={{ color: 'var(--text-primary)', letterSpacing: '0.08em' }}
-          >
-            BLUEPRINT GATECHECKER
-          </span>
+          <div className="flex items-baseline gap-2 min-w-0">
+            <span
+              className="font-display text-sm sm:text-base font-semibold tracking-wide truncate"
+              style={{ color: 'var(--text-primary)', letterSpacing: '0.02em' }}
+            >
+              Blueprint Gatechecker
+            </span>
+            <span
+              className="hidden sm:inline font-mono text-xs"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              v2.0
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="w-1.5 h-1.5 rounded-full"
-            style={{ background: 'var(--accent-green)' }}
-          />
-          <span className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
-            v2.0
-          </span>
+
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Status dot */}
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-1.5 h-1.5 rounded-full"
+              style={{
+                background: hasRun && report
+                  ? report.status === 'BLOCKED'
+                    ? 'var(--accent-fail)'
+                    : report.status === 'PASSED'
+                      ? 'var(--accent-pass)'
+                      : 'var(--accent-warn)'
+                  : 'var(--text-muted)',
+              }}
+            />
+            <span className="font-mono text-xs hidden sm:inline" style={{ color: 'var(--text-muted)' }}>
+              {hasRun && report
+                ? report.status === 'BLOCKED'
+                  ? 'Blocked'
+                  : report.status === 'PASSED'
+                    ? 'Passed'
+                    : 'Warned'
+                : 'Ready'}
+            </span>
+          </div>
         </div>
       </header>
 
-      {/* Main content */}
+      {/* === MAIN CONTENT === */}
       <main
-        className="relative flex-1 flex gap-4 p-4 overflow-hidden"
+        className="relative flex-1 flex flex-col lg:flex-row gap-3 sm:gap-4 p-3 sm:p-4 overflow-auto"
         style={{ zIndex: 1 }}
       >
         {/* Left column: JSON Editor */}
-        <div className="flex-1 min-w-0" style={{ maxWidth: '55%' }}>
+        <div className="w-full lg:flex-1 lg:min-w-0 lg:max-w-[52%] xl:max-w-[50%]">
           <JsonEditor
             value={jsonValue}
             onChange={setJsonValue}
@@ -139,13 +182,22 @@ export default function App() {
         </div>
 
         {/* Right column: Pipeline + Findings + Report */}
-        <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-y-auto" style={{ maxWidth: '45%' }}>
-          <ValidationPipeline layerStates={layerStates} />
+        <div className="w-full lg:flex-1 lg:min-w-0 flex flex-col gap-3 sm:gap-4 lg:overflow-y-auto">
+          {/* Validation Pipeline — prominent visual element */}
+          <ValidationPipeline
+            layerStates={layerStates}
+            onLayerClick={handleLayerClick}
+            activeLayer={activeLayer}
+          />
+
+          {/* Findings Panel */}
           <FindingsPanel
             findings={report?.findings ?? []}
             hasRun={hasRun}
             activeLayer={activeLayer}
           />
+
+          {/* Gate Report */}
           <GateReportView report={report} hasRun={hasRun} />
         </div>
       </main>
