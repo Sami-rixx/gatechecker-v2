@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Upload, RotateCcw } from 'lucide-react';
+import { Upload, RotateCcw, AlertCircle, Check, Play } from 'lucide-react';
 
 interface JsonEditorProps {
   value: string;
@@ -21,11 +21,21 @@ export default function JsonEditor({
   parseError,
 }: JsonEditorProps) {
   const [lineCount, setLineCount] = useState(1);
+  const [isValidJson, setIsValidJson] = useState(true);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      onChange(e.target.value);
-      setLineCount(e.target.value.split('\n').length);
+      const text = e.target.value;
+      onChange(text);
+      setLineCount(text.split('\n').length);
+      try {
+        if (text.trim()) {
+          JSON.parse(text);
+          setIsValidJson(true);
+        }
+      } catch {
+        setIsValidJson(false);
+      }
     },
     [onChange]
   );
@@ -47,39 +57,37 @@ export default function JsonEditor({
   const lines = Array.from({ length: Math.max(lineCount, 1) }, (_, i) => i + 1);
 
   return (
-    <div
-      className="flex flex-col h-full"
-      style={{ background: 'var(--bg-surface-raised)', border: '1px solid var(--border-subtle)', borderRadius: 3 }}
-    >
+    <div className="panel flex flex-col h-full" style={{ minHeight: 320 }}>
       {/* Header */}
       <div
-        className="flex items-center justify-between px-4 py-3"
+        className="flex items-center justify-between px-3 sm:px-4 py-3"
         style={{ borderBottom: '1px solid var(--border-subtle)' }}
       >
-        <span
-          className="font-heading text-xs font-semibold tracking-widest uppercase"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          Canonical Payload
-        </span>
-        <div className="flex items-center gap-3">
-          {parseError && (
-            <span className="font-mono text-xs" style={{ color: 'var(--accent-red)' }}>
-              JSON Error
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="label-caps truncate">Payload Input</span>
+          {parseError ? (
+            <span className="font-mono text-xs flex-shrink-0" style={{ color: 'var(--accent-fail)' }}>
+              <AlertCircle size={12} className="inline mr-1" />
+              Error
             </span>
-          )}
-          <span className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>
-            {lineCount} lines
-          </span>
+          ) : value.trim() && isValidJson ? (
+            <span className="font-mono text-xs flex-shrink-0" style={{ color: 'var(--accent-pass)' }}>
+              <Check size={12} className="inline mr-1" />
+              Valid
+            </span>
+          ) : null}
         </div>
+        <span className="font-mono text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+          {lineCount} lines
+        </span>
       </div>
 
       {/* Editor */}
       <div className="flex-1 flex overflow-hidden relative" style={{ minHeight: 0 }}>
         {/* Line numbers */}
         <div
-          className="flex-shrink-0 py-4 pr-2 pl-4 text-right select-none overflow-hidden"
-          style={{ background: 'var(--bg-input)', color: 'var(--text-muted)' }}
+          className="hidden sm:flex flex-shrink-0 py-4 pr-2 pl-3 text-right select-none overflow-hidden"
+          style={{ background: 'var(--bg-input)', color: 'var(--text-muted)', minWidth: 48 }}
         >
           {lines.map((n) => (
             <div key={n} className="font-mono text-xs leading-6">
@@ -94,70 +102,78 @@ export default function JsonEditor({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           spellCheck={false}
-          className="flex-1 w-full py-4 px-3 font-mono text-sm leading-6 resize-none outline-none border-none"
+          className="flex-1 w-full py-4 px-3 sm:px-4 font-mono text-xs sm:text-sm leading-6 resize-none outline-none border-none touch-target"
           style={{
             background: 'var(--bg-input)',
             color: 'var(--text-primary)',
             tabSize: 2,
           }}
+          placeholder="Paste your school's canonical payload here to begin validation..."
         />
       </div>
 
-      {/* Parse error */}
+      {/* Parse error banner */}
       {parseError && (
         <div
-          className="px-4 py-2 font-mono text-xs"
-          style={{ background: 'rgba(196, 90, 74, 0.1)', color: 'var(--accent-red)', borderTop: '1px solid var(--border-subtle)' }}
+          className="px-3 sm:px-4 py-2.5 font-mono text-xs"
+          style={{
+            background: 'rgba(184, 107, 107, 0.1)',
+            color: 'var(--accent-fail)',
+            borderTop: '1px solid var(--border-subtle)',
+          }}
         >
           {parseError}
         </div>
       )}
 
       {/* Action bar */}
-      <div className="p-4 flex flex-col gap-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+      <div className="px-3 sm:px-4 py-3 flex flex-col sm:flex-row gap-2 sm:gap-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
         <button
           onClick={onRun}
           disabled={isRunning}
-          className="w-full h-11 font-heading text-sm font-semibold uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 h-11 sm:h-10 font-display text-sm font-semibold uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed touch-target flex items-center justify-center gap-2"
           style={{
-            background: 'var(--accent-teal)',
-            color: '#0c0e13',
-            borderRadius: 3,
+            background: 'var(--brass)',
+            color: 'var(--ink)',
+            borderRadius: 'var(--radius-sm)',
           }}
           onMouseEnter={(e) => {
-            if (!isRunning) e.currentTarget.style.background = '#5ab5a5';
+            if (!isRunning) e.currentTarget.style.background = 'var(--brass-bright)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--accent-teal)';
+            e.currentTarget.style.background = 'var(--brass)';
           }}
         >
           {isRunning ? (
-            <span className="flex items-center justify-center gap-2">
+            <>
               <svg className="spin-slow" width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M8 1.5A6.5 6.5 0 001.5 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 <path d="M8 14.5A6.5 6.5 0 0014.5 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.3" />
               </svg>
               Validating...
-            </span>
+            </>
           ) : (
-            'Run Gatecheck'
+            <>
+              <Play size={15} />
+              Run Gatecheck
+            </>
           )}
         </button>
 
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-center gap-4 sm:gap-3">
           <button
             onClick={onLoadSample}
-            className="flex items-center gap-1.5 font-mono text-xs transition-colors"
+            className="flex items-center gap-1.5 font-mono text-xs transition-colors touch-target py-2"
             style={{ color: 'var(--text-muted)' }}
             onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
           >
             <Upload size={12} />
-            Load Sample Data
+            Load Sample
           </button>
           <button
             onClick={onReset}
-            className="flex items-center gap-1.5 font-mono text-xs transition-colors"
+            className="flex items-center gap-1.5 font-mono text-xs transition-colors touch-target py-2"
             style={{ color: 'var(--text-muted)' }}
             onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
