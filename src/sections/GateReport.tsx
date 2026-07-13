@@ -158,7 +158,7 @@ export default function GateReportView({ report, hasRun }: GateReportProps) {
       findings: report.findings,
       summary: report.summary,
     };
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
